@@ -26,16 +26,102 @@ def get_companies():
         
         # Get data from the first table found
         table_name = tables[0]['name']
-        cursor.execute(f"SELECT * FROM {table_name} LIMIT 100")
+        cursor.execute(f"SELECT Ticker, Name, Sector, Sub_Sector FROM {table_name} LIMIT 100")
         companies = cursor.fetchall()
         
-        # Convert to list of dictionaries
-        companies_list = [dict(company) for company in companies]
+        # Convert to list of dictionaries with specific column order
+        companies_list = []
+        for company in companies:
+            companies_list.append({
+                'ticker': company['Ticker'],
+                'name': company['Name'], 
+                'sector': company['Sector'],
+                'sub_sector': company['Sub_Sector']
+            })
         
         return jsonify({
             'table_name': table_name,
             'companies': companies_list,
             'total_count': len(companies_list)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)})
+    finally:
+        conn.close()
+
+@app.route('/api/sectors')
+def get_sectors():
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT Sector FROM Companies ORDER BY Sector")
+        sectors = [row[0] for row in cursor.fetchall()]
+        return jsonify({'sectors': sectors})
+    except Exception as e:
+        return jsonify({'error': str(e)})
+    finally:
+        conn.close()
+
+@app.route('/api/subsectors')
+def get_subsectors():
+    sector = request.args.get('sector', '')
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        if sector:
+            cursor.execute("SELECT DISTINCT Sub_Sector FROM Companies WHERE Sector = ? ORDER BY Sub_Sector", (sector,))
+        else:
+            cursor.execute("SELECT DISTINCT Sub_Sector FROM Companies ORDER BY Sub_Sector")
+        subsectors = [row[0] for row in cursor.fetchall()]
+        return jsonify({'subsectors': subsectors})
+    except Exception as e:
+        return jsonify({'error': str(e)})
+    finally:
+        conn.close()
+
+@app.route('/api/filter')
+def filter_companies():
+    sector = request.args.get('sector', '')
+    sub_sector = request.args.get('sub_sector', '')
+    
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        # Build query based on filters
+        query = "SELECT Ticker, Name, Sector, Sub_Sector FROM Companies WHERE 1=1"
+        params = []
+        
+        if sector:
+            query += " AND Sector = ?"
+            params.append(sector)
+        
+        if sub_sector:
+            query += " AND Sub_Sector = ?"
+            params.append(sub_sector)
+        
+        query += " ORDER BY Name LIMIT 100"
+        
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+        
+        # Convert to list of dictionaries with specific column order
+        companies_list = []
+        for result in results:
+            companies_list.append({
+                'ticker': result['Ticker'],
+                'name': result['Name'],
+                'sector': result['Sector'], 
+                'sub_sector': result['Sub_Sector']
+            })
+        
+        return jsonify({
+            'companies': companies_list,
+            'filters': {
+                'sector': sector,
+                'sub_sector': sub_sector
+            },
+            'total_count': len(results)
         })
     except Exception as e:
         return jsonify({'error': str(e)})
@@ -61,19 +147,25 @@ def search_companies():
         columns = cursor.fetchall()
         column_names = [col['name'] for col in columns]
         
-        # Build dynamic search query
-        search_conditions = []
-        for col in column_names:
-            search_conditions.append(f"LOWER({col}) LIKE ?")
-        
-        search_query = f"SELECT * FROM {table_name} WHERE {' OR '.join(search_conditions)} LIMIT 50"
-        search_params = [f'%{query}%'] * len(column_names)
+        # Build search query with specific columns
+        search_query = f"SELECT Ticker, Name, Sector, Sub_Sector FROM {table_name} WHERE LOWER(Ticker) LIKE ? OR LOWER(Name) LIKE ? OR LOWER(Sector) LIKE ? OR LOWER(Sub_Sector) LIKE ? LIMIT 50"
+        search_params = [f'%{query}%'] * 4
         
         cursor.execute(search_query, search_params)
         results = cursor.fetchall()
         
+        # Convert to list of dictionaries with specific column order
+        companies_list = []
+        for result in results:
+            companies_list.append({
+                'ticker': result['Ticker'],
+                'name': result['Name'],
+                'sector': result['Sector'], 
+                'sub_sector': result['Sub_Sector']
+            })
+        
         return jsonify({
-            'companies': [dict(result) for result in results],
+            'companies': companies_list,
             'query': query,
             'total_count': len(results)
         })

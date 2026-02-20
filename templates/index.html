@@ -50,25 +50,74 @@
             border-bottom: 1px solid #e9ecef;
         }
 
-        .search-container {
+        .search-tabs {
             display: flex;
             gap: 10px;
-            max-width: 600px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .search-container {
+            display: none;
+            gap: 10px;
+            max-width: 800px;
             margin: 0 auto;
         }
 
-        .search-input {
-            flex: 1;
+        .search-container.active {
+            display: flex;
+        }
+
+        .filter-container {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .search-input, .filter-select {
             padding: 12px 20px;
             border: 2px solid #e9ecef;
             border-radius: 8px;
             font-size: 16px;
             transition: border-color 0.3s;
+            background: white;
         }
 
-        .search-input:focus {
+        .search-input:focus, .filter-select:focus {
             outline: none;
             border-color: #667eea;
+        }
+
+        .filter-select {
+            min-width: 200px;
         }
 
         .search-btn {
@@ -174,10 +223,36 @@
         </header>
 
         <section class="search-section">
-            <div class="search-container">
+            <div class="search-tabs">
+                <button class="tab-btn active" onclick="switchTab('text')">Text Search</button>
+                <button class="tab-btn" onclick="switchTab('sector')">Sector Filter</button>
+            </div>
+
+            <!-- Text Search -->
+            <div id="textSearch" class="search-container active">
                 <input type="text" id="searchInput" class="search-input" placeholder="Search companies...">
                 <button onclick="searchCompanies()" class="search-btn">Search</button>
                 <button onclick="loadCompanies()" class="search-btn">Reset</button>
+            </div>
+
+            <!-- Sector Filter -->
+            <div id="sectorFilter" class="search-container">
+                <div class="filter-container">
+                    <div class="filter-group">
+                        <label class="filter-label">Sector:</label>
+                        <select id="sectorSelect" class="filter-select" onchange="updateSubSectors()">
+                            <option value="">All Sectors</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Sub Sector:</label>
+                        <select id="subSectorSelect" class="filter-select">
+                            <option value="">All Sub Sectors</option>
+                        </select>
+                    </div>
+                    <button onclick="filterBySector()" class="search-btn">Apply Filter</button>
+                    <button onclick="loadCompanies()" class="search-btn">Reset</button>
+                </div>
             </div>
         </section>
 
@@ -279,12 +354,13 @@
             tableHead.innerHTML = '';
             tableBody.innerHTML = '';
 
-            // Create table headers
-            const headers = Object.keys(data.companies[0]);
+            // Create table headers in specific order
+            const headers = ['ticker', 'name', 'sector', 'sub_sector'];
+            const headerNames = ['Ticker', 'Name', 'Sector', 'Sub Sector'];
             const headerRow = document.createElement('tr');
-            headers.forEach(header => {
+            headers.forEach((header, index) => {
                 const th = document.createElement('th');
-                th.textContent = header.replace(/_/g, ' ').toUpperCase();
+                th.textContent = headerNames[index];
                 headerRow.appendChild(th);
             });
             tableHead.appendChild(headerRow);
@@ -335,6 +411,136 @@
             const errorDiv = document.getElementById('error');
             errorDiv.textContent = `Error: ${message}`;
             errorDiv.style.display = 'block';
+        }
+
+        // Tab switching functionality
+        function switchTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update search containers
+            document.querySelectorAll('.search-container').forEach(container => container.classList.remove('active'));
+            
+            if (tab === 'text') {
+                document.getElementById('textSearch').classList.add('active');
+            } else if (tab === 'sector') {
+                document.getElementById('sectorFilter').classList.add('active');
+                loadSectors();
+            }
+        }
+
+        // Load sectors for dropdown
+        async function loadSectors() {
+            try {
+                const response = await fetch('/api/sectors');
+                const data = await response.json();
+                
+                const sectorSelect = document.getElementById('sectorSelect');
+                sectorSelect.innerHTML = '<option value="">All Sectors</option>';
+                
+                data.sectors.forEach(sector => {
+                    const option = document.createElement('option');
+                    option.value = sector;
+                    option.textContent = sector;
+                    sectorSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading sectors:', error);
+            }
+        }
+
+        // Update sub-sectors based on selected sector
+        async function updateSubSectors() {
+            const sector = document.getElementById('sectorSelect').value;
+            const subSectorSelect = document.getElementById('subSectorSelect');
+            
+            subSectorSelect.innerHTML = '<option value="">All Sub Sectors</option>';
+            
+            if (sector) {
+                try {
+                    const response = await fetch(`/api/subsectors?sector=${encodeURIComponent(sector)}`);
+                    const data = await response.json();
+                    
+                    data.subsectors.forEach(subSector => {
+                        const option = document.createElement('option');
+                        option.value = subSector;
+                        option.textContent = subSector;
+                        subSectorSelect.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Error loading sub-sectors:', error);
+                }
+            }
+        }
+
+        // Filter by sector and sub-sector
+        async function filterBySector() {
+            const sector = document.getElementById('sectorSelect').value;
+            const subSector = document.getElementById('subSectorSelect').value;
+            
+            if (!sector && !subSector) {
+                loadCompanies();
+                return;
+            }
+
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('error').style.display = 'none';
+                document.getElementById('results').style.display = 'none';
+                document.getElementById('noResults').style.display = 'none';
+
+                const params = new URLSearchParams();
+                if (sector) params.append('sector', sector);
+                if (subSector) params.append('sub_sector', subSector);
+
+                const response = await fetch(`/api/filter?${params}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                currentData = data.companies;
+                
+                if (data.companies.length === 0) {
+                    document.getElementById('noResults').style.display = 'block';
+                    document.getElementById('stats').innerHTML = '';
+                } else {
+                    displayResults(data);
+                    updateFilterStats(data);
+                }
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function updateFilterStats(data) {
+            const filters = data.filters;
+            let filterDescription = '';
+            
+            if (filters.sector && filters.sub_sector) {
+                filterDescription = `${filters.sector} - ${filters.sub_sector}`;
+            } else if (filters.sector) {
+                filterDescription = filters.sector;
+            } else if (filters.sub_sector) {
+                filterDescription = filters.sub_sector;
+            }
+            
+            const statsHtml = `
+                <div class="stat-card">
+                    <div class="stat-number">${data.total_count}</div>
+                    <div class="stat-label">Companies Found</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${filterDescription}</div>
+                    <div class="stat-label">Filter Applied</div>
+                </div>
+            `;
+            document.getElementById('stats').innerHTML = statsHtml;
         }
 
         // Handle Enter key in search input
