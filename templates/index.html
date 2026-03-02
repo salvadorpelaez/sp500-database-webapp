@@ -366,7 +366,7 @@
             tableHead.appendChild(headerRow);
 
             // Create table rows
-            data.companies.forEach(company => {
+            data.companies.slice(0, 15).forEach(company => {
                 const row = document.createElement('tr');
                 headers.forEach(header => {
                     const td = document.createElement('td');
