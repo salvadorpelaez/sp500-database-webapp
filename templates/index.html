@@ -213,6 +213,49 @@
             padding: 40px;
             color: #6c757d;
         }
+
+        .pagination {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .pagination.active {
+            display: flex;
+        }
+
+        .page-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            background: white;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            border-color: #667eea;
+        }
+
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            color: #6c757d;
+            font-weight: 600;
+            min-width: 140px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -266,6 +309,11 @@
                     <tbody id="tableBody"></tbody>
                 </table>
             </div>
+            <div id="pagination" class="pagination">
+                <button id="prevPageBtn" class="page-btn" onclick="prevPage()" aria-label="Previous page">&larr;</button>
+                <div id="pageInfo" class="page-info"></div>
+                <button id="nextPageBtn" class="page-btn" onclick="nextPage()" aria-label="Next page">&rarr;</button>
+            </div>
             <div id="noResults" class="no-results" style="display: none;">
                 <h3>No companies found</h3>
                 <p>Try adjusting your search criteria</p>
@@ -275,6 +323,13 @@
 
     <script>
         let currentData = [];
+
+        const PAGE_SIZE = 15;
+        let currentPage = 1;
+        let currentCompanies = [];
+
+        const TABLE_HEADERS = ['ticker', 'name', 'sector', 'sub_sector'];
+        const TABLE_HEADER_NAMES = ['Ticker', 'Name', 'Sector', 'Sub Sector'];
 
         async function loadCompanies() {
             try {
@@ -344,6 +399,7 @@
             if (data.companies.length === 0) {
                 document.getElementById('noResults').style.display = 'block';
                 document.getElementById('stats').innerHTML = '';
+                document.getElementById('pagination').classList.remove('active');
                 return;
             }
 
@@ -355,20 +411,34 @@
             tableBody.innerHTML = '';
 
             // Create table headers in specific order
-            const headers = ['ticker', 'name', 'sector', 'sub_sector'];
-            const headerNames = ['Ticker', 'Name', 'Sector', 'Sub Sector'];
             const headerRow = document.createElement('tr');
-            headers.forEach((header, index) => {
+            TABLE_HEADERS.forEach((header, index) => {
                 const th = document.createElement('th');
-                th.textContent = headerNames[index];
+                th.textContent = TABLE_HEADER_NAMES[index];
                 headerRow.appendChild(th);
             });
             tableHead.appendChild(headerRow);
 
-            // Create table rows
-            data.companies.slice(0, 15).forEach(company => {
+            currentCompanies = data.companies;
+            currentPage = 1;
+            renderCurrentPage();
+
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function renderCurrentPage() {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+
+            const totalPages = Math.max(1, Math.ceil(currentCompanies.length / PAGE_SIZE));
+            currentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+            const startIndex = (currentPage - 1) * PAGE_SIZE;
+            const pageCompanies = currentCompanies.slice(startIndex, startIndex + PAGE_SIZE);
+
+            pageCompanies.forEach(company => {
                 const row = document.createElement('tr');
-                headers.forEach(header => {
+                TABLE_HEADERS.forEach(header => {
                     const td = document.createElement('td');
                     td.textContent = company[header] || '';
                     row.appendChild(td);
@@ -376,7 +446,30 @@
                 tableBody.appendChild(row);
             });
 
-            document.getElementById('results').style.display = 'block';
+            const pagination = document.getElementById('pagination');
+            const pageInfo = document.getElementById('pageInfo');
+            const prevBtn = document.getElementById('prevPageBtn');
+            const nextBtn = document.getElementById('nextPageBtn');
+
+            if (currentCompanies.length <= PAGE_SIZE) {
+                pagination.classList.remove('active');
+            } else {
+                pagination.classList.add('active');
+            }
+
+            pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPages;
+        }
+
+        function nextPage() {
+            currentPage += 1;
+            renderCurrentPage();
+        }
+
+        function prevPage() {
+            currentPage -= 1;
+            renderCurrentPage();
         }
 
         function updateStats(data) {
