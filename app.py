@@ -1,5 +1,6 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 import sqlite3
+import os
 
 app = Flask(__name__)
 
@@ -173,6 +174,10 @@ def search_companies():
         return jsonify({'error': str(e)})
     finally:
         conn.close()
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory('static', filename)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
