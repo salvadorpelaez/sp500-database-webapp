@@ -211,8 +211,13 @@
         function handleBenchmarkChange() {
             const selectedValue = document.getElementById('benchmarkSelect').value;
             if (selectedValue) {
-                alert(`Selected benchmark: ${selectedValue}`);
-                // TODO: Implement actual benchmark switching logic
+                if (selectedValue === 'sp500') {
+                    // Navigate to S&P 500 page (valsp500mainpage_v1.0.11)
+                    window.location.href = '/sp500';
+                } else {
+                    alert(`Selected benchmark: ${selectedValue}`);
+                    // TODO: Implement other benchmark pages
+                }
             }
         }
 

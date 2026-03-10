@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S&P 500 Database</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .login-container {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .logo-container {
+            position: absolute;
+            top: 10px;
+            left: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-text {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        .dropdown-container {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        .dropdown-select {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.15);
+            border: 2px solid black;
+            border-radius: 6px;
+            color: black;
+            font-size: 14px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            min-width: 300px;
+        }
+
+        .dropdown-select option {
+            background: #2c3e50;
+            color: white;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+            overflow: hidden;
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .login-input {
+            padding: 8px 12px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+        }
+
+        .login-input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .login-input:focus {
+            outline: none;
+            border-color: rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.2);
+        }
+
+        .login-btn {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .login-btn:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.5);
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            margin-top: 60px;
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1em;
+            margin-top: 10px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .search-section {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .search-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .search-container {
+            display: none;
+            gap: 10px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .search-container.active {
+            display: flex;
+        }
+
+        .filter-container {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .search-input, .filter-select {
+            padding: 12px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            background: white;
+        }
+
+        .search-input:focus, .filter-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-select {
+            min-width: 200px;
+        }
+
+        .search-btn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            opacity: 0.9;
+        }
+
+        .pagination {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .pagination.active {
+            display: flex;
+        }
+
+        .page-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            background: white;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            border-color: #667eea;
+        }
+
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            color: #6c757d;
+            font-weight: 600;
+            min-width: 140px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-container">
+                <div class="logo">
+                    <img src="/static/logo.png" alt="Company Logo">
+                </div>
+                <span class="logo-text">Valerious - Value Analytics Made Simple</span>
+            </div>
+            <div class="dropdown-container">
+                <select id="benchmarkSelect" class="dropdown-select" onchange="handleBenchmarkChange()">
+                    <option value="">Select Benchmark</option>
+                    <option value="sp500" selected>S&P 500: Large-Cap Core & Dividend Benchmarks</option>
+                    <option value="nasdaq100">Nasdaq-100: AI-Driven Hypergrowth & Tech Innovation</option>
+                    <option value="dowjones">Dow Jones: Ultra-Mature Blue Chips & Dividend Streaks</option>
+                    <option value="russell2000">Russell 2000: Scrappy Small-Cap Value & Hidden Gems</option>
+                </select>
+            </div>
+            <div class="login-container">
+                <input type="text" id="username" class="login-input" placeholder="Username">
+                <input type="password" id="password" class="login-input" placeholder="Password">
+                <button onclick="handleLogin()" class="login-btn">Login</button>
+            </div>
+            <h1>S&P 500 Database</h1>
+            <p class="subtitle">S&P 500 Master Database Explorer</p>
+        </header>
+
+        <section class="search-section">
+            <div class="search-tabs">
+                <button class="tab-btn active" onclick="switchTab('text')">Text Search</button>
+                <button class="tab-btn" onclick="switchTab('sector')">Sector and Classification Filter</button>
+            </div>
+
+            <!-- Text Search -->
+            <div id="textSearch" class="search-container active">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search companies...">
+                <button onclick="searchCompanies()" class="search-btn">Search</button>
+                <button onclick="loadCompanies()" class="search-btn">Reset</button>
+            </div>
+
+            <!-- Sector Filter -->
+            <div id="sectorFilter" class="search-container">
+                <div class="filter-container">
+                    <div class="filter-group">
+                        <label class="filter-label">Sector:</label>
+                        <select id="sectorSelect" class="filter-select" onchange="updateSubSectors()">
+                            <option value="">All Sectors</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Sub Sector:</label>
+                        <select id="subSectorSelect" class="filter-select">
+                            <option value="">All Sub Sectors</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Classification:</label>
+                        <select id="columnSelect" class="filter-select">
+                            <option value="">All Classifications</option>
+                        </select>
+                    </div>
+                    <button onclick="filterBySector()" class="search-btn">Apply Filter</button>
+                    <button onclick="loadCompanies()" class="search-btn">Reset</button>
+                </div>
+            </div>
+        </section>
+
+        <main class="content">
+            <div id="stats" class="stats"></div>
+            <div id="loading" class="loading">Loading companies data...</div>
+            <div id="error" class="error" style="display: none;"></div>
+            <div id="results" class="table-container" style="display: none;">
+                <table id="companiesTable">
+                    <thead id="tableHead"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+            <div id="pagination" class="pagination">
+                <button id="prevPageBtn" class="page-btn" onclick="prevPage()" aria-label="Previous page">&larr;</button>
+                <div id="pageInfo" class="page-info"></div>
+                <button id="nextPageBtn" class="page-btn" onclick="nextPage()" aria-label="Next page">&rarr;</button>
+            </div>
+            <div id="noResults" class="no-results" style="display: none;">
+                <h3>No companies found</h3>
+                <p>Try adjusting your search criteria</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentData = [];
+
+        const PAGE_SIZE = 15;
+        let currentPage = 1;
+        let currentCompanies = [];
+
+        const TABLE_HEADERS = ['ticker', 'name', 'sector', 'sub_sector'];
+        const TABLE_HEADER_NAMES = ['Ticker', 'Name', 'Sector', 'Sub Sector'];
+
+        // Benchmark dropdown functionality
+        function handleBenchmarkChange() {
+            const selectedValue = document.getElementById('benchmarkSelect').value;
+            if (selectedValue) {
+                if (selectedValue === 'sp500') {
+                    // Already on S&P 500 page
+                    return;
+                } else {
+                    alert(`Selected benchmark: ${selectedValue}`);
+                    // TODO: Implement other benchmark pages
+                }
+            }
+        }
+
+        // Tab switching functionality
+        function switchTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update search containers
+            document.querySelectorAll('.search-container').forEach(container => container.classList.remove('active'));
+            
+            if (tab === 'text') {
+                document.getElementById('textSearch').classList.add('active');
+            } else if (tab === 'sector') {
+                document.getElementById('sectorFilter').classList.add('active');
+                loadSectors();
+                loadColumns();
+            }
+        }
+
+        // Load columns for dropdown
+        async function loadColumns() {
+            try {
+                const response = await fetch('/api/columns');
+                const data = await response.json();
+                
+                const columnSelect = document.getElementById('columnSelect');
+                columnSelect.innerHTML = '<option value="">All Classifications</option>';
+                
+                data.columns.forEach(column => {
+                    const option = document.createElement('option');
+                    option.value = column.value;
+                    option.textContent = column.label;
+                    columnSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading columns:', error);
+            }
+        }
+
+        // Load sectors for dropdown
+        async function loadSectors() {
+            try {
+                const response = await fetch('/api/sectors');
+                const data = await response.json();
+                
+                const sectorSelect = document.getElementById('sectorSelect');
+                sectorSelect.innerHTML = '<option value="">All Sectors</option>';
+                
+                data.sectors.forEach(sector => {
+                    const option = document.createElement('option');
+                    option.value = sector;
+                    option.textContent = sector;
+                    sectorSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading sectors:', error);
+            }
+        }
+
+        // Update sub-sectors based on selected sector
+        async function updateSubSectors() {
+            const sector = document.getElementById('sectorSelect').value;
+            const subSectorSelect = document.getElementById('subSectorSelect');
+            
+            subSectorSelect.innerHTML = '<option value="">All Sub Sectors</option>';
+            
+            if (sector) {
+                try {
+                    const response = await fetch(`/api/subsectors?sector=${encodeURIComponent(sector)}`);
+                    const data = await response.json();
+                    
+                    data.subsectors.forEach(subSector => {
+                        const option = document.createElement('option');
+                        option.value = subSector;
+                        option.textContent = subSector;
+                        subSectorSelect.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Error loading sub-sectors:', error);
+                }
+            }
+        }
+
+        // Filter by sector and sub-sector (and column)
+        async function filterBySector() {
+            const sector = document.getElementById('sectorSelect').value;
+            const subSector = document.getElementById('subSectorSelect').value;
+            const column = document.getElementById('columnSelect').value;
+            
+            if (!sector && !subSector && !column) {
+                loadCompanies();
+                return;
+            }
+
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('error').style.display = 'none';
+                document.getElementById('results').style.display = 'none';
+                document.getElementById('noResults').style.display = 'none';
+
+                const params = new URLSearchParams();
+                if (sector) params.append('sector', sector);
+                if (subSector) params.append('sub_sector', subSector);
+
+                const response = await fetch(`/api/filter?${params}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                let filteredCompanies = data.companies;
+                
+                // Apply column filtering if selected
+                if (column) {
+                    filteredCompanies = filteredCompanies.filter(company => {
+                        return company[column] && company[column].trim() !== '';
+                    });
+                }
+
+                currentData = filteredCompanies;
+                
+                if (filteredCompanies.length === 0) {
+                    document.getElementById('noResults').style.display = 'block';
+                    document.getElementById('stats').innerHTML = '';
+                } else {
+                    displayResults({companies: filteredCompanies});
+                    updateFilterStats(filteredCompanies, {sector, sub_sector: subSector, column});
+                }
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function updateFilterStats(companies, filters) {
+            const columnLabels = {
+                'ticker': 'Ticker',
+                'name': 'Name', 
+                'sector': 'Sector',
+                'sub_sector': 'Sub Sector'
+            };
+            
+            let filterDescription = '';
+            
+            if (filters.sector && filters.sub_sector && filters.column) {
+                filterDescription = `${filters.sector} - ${filters.sub_sector} + ${columnLabels[filters.column]}`;
+            } else if (filters.sector && filters.sub_sector) {
+                filterDescription = `${filters.sector} - ${filters.sub_sector}`;
+            } else if (filters.sector && filters.column) {
+                filterDescription = `${filters.sector} + ${columnLabels[filters.column]}`;
+            } else if (filters.sub_sector && filters.column) {
+                filterDescription = `${filters.sub_sector} + ${columnLabels[filters.column]}`;
+            } else if (filters.sector) {
+                filterDescription = filters.sector;
+            } else if (filters.sub_sector) {
+                filterDescription = filters.sub_sector;
+            } else if (filters.column) {
+                filterDescription = columnLabels[filters.column];
+            }
+            
+            const statsHtml = `
+                <div class="stat-card">
+                    <div class="stat-number">${companies.length}</div>
+                    <div class="stat-label">Companies Found</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${filterDescription}</div>
+                    <div class="stat-label">Filter Applied</div>
+                </div>
+            `;
+            document.getElementById('stats').innerHTML = statsHtml;
+        }
+
+        async function loadCompanies() {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('error').style.display = 'none';
+                document.getElementById('results').style.display = 'none';
+                document.getElementById('noResults').style.display = 'none';
+                document.getElementById('stats').innerHTML = '';
+
+                const response = await fetch('/api/companies');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                currentData = data.companies;
+                displayResults(data);
+                updateStats(data);
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        async function searchCompanies() {
+            const query = document.getElementById('searchInput').value.trim();
+            
+            if (!query) {
+                loadCompanies();
+                return;
+            }
+
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('error').style.display = 'none';
+                document.getElementById('results').style.display = 'none';
+                document.getElementById('noResults').style.display = 'none';
+
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                currentData = data.companies;
+                
+                if (data.companies.length === 0) {
+                    document.getElementById('noResults').style.display = 'block';
+                } else {
+                    displayResults(data);
+                    updateSearchStats(data);
+                }
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function displayResults(data) {
+            if (data.companies.length === 0) {
+                document.getElementById('noResults').style.display = 'block';
+                document.getElementById('stats').innerHTML = '';
+                document.getElementById('pagination').classList.remove('active');
+                return;
+            }
+
+            const tableHead = document.getElementById('tableHead');
+            const tableBody = document.getElementById('tableBody');
+            
+            // Clear existing content
+            tableHead.innerHTML = '';
+            tableBody.innerHTML = '';
+
+            // Create table headers in specific order
+            const headerRow = document.createElement('tr');
+            TABLE_HEADERS.forEach((header, index) => {
+                const th = document.createElement('th');
+                th.textContent = TABLE_HEADER_NAMES[index];
+                headerRow.appendChild(th);
+            });
+            tableHead.appendChild(headerRow);
+
+            currentCompanies = data.companies;
+            currentPage = 1;
+            renderCurrentPage();
+
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function renderCurrentPage() {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+
+            const totalPages = Math.max(1, Math.ceil(currentCompanies.length / PAGE_SIZE));
+            currentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+            const startIndex = (currentPage - 1) * PAGE_SIZE;
+            const pageCompanies = currentCompanies.slice(startIndex, startIndex + PAGE_SIZE);
+
+            pageCompanies.forEach(company => {
+                const row = document.createElement('tr');
+                TABLE_HEADERS.forEach(header => {
+                    const td = document.createElement('td');
+                    td.textContent = company[header] || '';
+                    row.appendChild(td);
+                });
+                tableBody.appendChild(row);
+            });
+
+            const pagination = document.getElementById('pagination');
+            const pageInfo = document.getElementById('pageInfo');
+            const prevBtn = document.getElementById('prevPageBtn');
+            const nextBtn = document.getElementById('nextPageBtn');
+
+            if (currentCompanies.length <= PAGE_SIZE) {
+                pagination.classList.remove('active');
+            } else {
+                pagination.classList.add('active');
+            }
+
+            pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPages;
+        }
+
+        function nextPage() {
+            currentPage += 1;
+            renderCurrentPage();
+        }
+
+        function prevPage() {
+            currentPage -= 1;
+            renderCurrentPage();
+        }
+
+        function updateStats(data) {
+            const statsHtml = `
+                <div class="stat-card">
+                    <div class="stat-number">${data.total_count}</div>
+                    <div class="stat-label">Total Companies</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${data.table_name}</div>
+                    <div class="stat-label">Table Name</div>
+                </div>
+            `;
+            document.getElementById('stats').innerHTML = statsHtml;
+        }
+
+        function updateSearchStats(data) {
+            const statsHtml = `
+                <div class="stat-card">
+                    <div class="stat-number">${data.total_count}</div>
+                    <div class="stat-label">Results Found</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">"${data.query}"</div>
+                    <div class="stat-label">Search Query</div>
+                </div>
+            `;
+            document.getElementById('stats').innerHTML = statsHtml;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = `Error: ${message}`;
+            errorDiv.style.display = 'block';
+        }
+
+        // Handle Enter key in search input
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchCompanies();
+            }
+        });
+
+        // Login functionality
+        function handleLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                alert('Please enter both username and password');
+                return;
+            }
+            
+            // For now, just show a login message
+            // TODO: Implement actual authentication
+            alert(`Login attempt for user: ${username}`);
+        }
+
+        // Handle Enter key in login inputs
+        document.getElementById('username').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('password').focus();
+            }
+        });
+
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleLogin();
+            }
+        });
+
+        // Load companies when page loads
+        window.addEventListener('load', loadCompanies);
+    </script>
+</body>
+</html>

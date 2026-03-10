@@ -13,6 +13,12 @@ def get_db_connection():
 def index():
     return render_template('index.html')
 
+@app.route('/sp500')
+def sp500_page():
+    # This will serve the valsp500mainpage_v1.0.11 content
+    # For now, we'll create a template for the S&P 500 page
+    return render_template('sp500.html')
+
 @app.route('/api/companies')
 def get_companies():
     conn = get_db_connection()
