@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 import sqlite3
 import os
+import yfinance as yf
+import pandas as pd
 
 app = Flask(__name__)
 
@@ -18,6 +20,83 @@ def sp500_page():
     # This will serve the valsp500mainpage_v1.0.11 content
     # For now, we'll create a template for the S&P 500 page
     return render_template('sp500.html')
+
+@app.route('/api/market-data')
+def get_market_data():
+    try:
+        tickers = ['^DJI', '^GSPC', '^IXIC', 'CL=F', '^TNX']
+        data = yf.download(tickers, period='2d', interval='1d')  # Use daily data for more reliability
+        
+        # Get the latest data for each ticker
+        latest_data = {}
+        ticker_names = {
+            '^DJI': 'Dow Jones',
+            '^GSPC': 'S&P 500', 
+            '^IXIC': 'NASDAQ',
+            'CL=F': 'Crude Oil',
+            '^TNX': '10Y Treasury'
+        }
+        
+        for ticker in tickers:
+            try:
+                if ticker in data['Close'].columns:
+                    # Get the most recent non-NaN price
+                    close_prices = data['Close'][ticker].dropna()
+                    if len(close_prices) == 0:
+                        continue
+                        
+                    latest_price = close_prices.iloc[-1]
+                    
+                    # Get previous price for change calculation
+                    if len(close_prices) > 1:
+                        previous_price = close_prices.iloc[-2]
+                    else:
+                        # If no previous data, use open price
+                        if ticker in data['Open'].columns:
+                            open_prices = data['Open'][ticker].dropna()
+                            if len(open_prices) > 0:
+                                previous_price = open_prices.iloc[-1]
+                            else:
+                                previous_price = latest_price
+                        else:
+                            previous_price = latest_price
+                    
+                    # Handle NaN values
+                    if pd.isna(latest_price) or pd.isna(previous_price) or previous_price == 0:
+                        latest_price = 0  # Default to 0 if no data
+                        previous_price = 0
+                        change = 0
+                        change_percent = 0
+                    else:
+                        change = latest_price - previous_price
+                        change_percent = (change / previous_price * 100)
+                    
+                    latest_data[ticker] = {
+                        'name': ticker_names.get(ticker, ticker),
+                        'price': round(float(latest_price), 2) if latest_price != 0 else 'N/A',
+                        'change': round(float(change), 2),
+                        'change_percent': round(float(change_percent), 2)
+                    }
+                else:
+                    # If ticker not found, add placeholder
+                    latest_data[ticker] = {
+                        'name': ticker_names.get(ticker, ticker),
+                        'price': 'N/A',
+                        'change': 0,
+                        'change_percent': 0
+                    }
+            except Exception as ticker_error:
+                # Add placeholder for failed ticker
+                latest_data[ticker] = {
+                    'name': ticker_names.get(ticker, ticker),
+                    'price': 'Error',
+                    'change': 0,
+                    'change_percent': 0
+                }
+        
+        return jsonify({'data': latest_data})
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 @app.route('/api/companies')
 def get_companies():
