@@ -384,12 +384,7 @@
                     <option value="russell2000">Russell 2000: Scrappy Small-Cap Value & Hidden Gems</option>
                 </select>
             </div>
-            <div class="login-container">
-                <input type="text" id="username" class="login-input" placeholder="Username">
-                <input type="password" id="password" class="login-input" placeholder="Password">
-                <button onclick="handleLogin()" class="login-btn">Login</button>
-            </div>
-            <h1>S&P 500 Database</h1>
+                        <h1>S&P 500 Database</h1>
             <p class="subtitle">S&P 500 Master Database Explorer</p>
         </header>
 
@@ -832,34 +827,6 @@
         document.getElementById('searchInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 searchCompanies();
-            }
-        });
-
-        // Login functionality
-        function handleLogin() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            if (!username || !password) {
-                alert('Please enter both username and password');
-                return;
-            }
-            
-            // For now, just show a login message
-            // TODO: Implement actual authentication
-            alert(`Login attempt for user: ${username}`);
-        }
-
-        // Handle Enter key in login inputs
-        document.getElementById('username').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                document.getElementById('password').focus();
-            }
-        });
-
-        document.getElementById('password').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                handleLogin();
             }
         });
 
