@@ -570,10 +570,12 @@
                 document.getElementById('error').style.display = 'none';
                 document.getElementById('results').style.display = 'none';
                 document.getElementById('noResults').style.display = 'none';
+                document.getElementById('stats').innerHTML = '';
 
                 const params = new URLSearchParams();
                 if (sector) params.append('sector', sector);
                 if (subSector) params.append('sub_sector', subSector);
+                if (column) params.append('classification', column);
 
                 const response = await fetch(`/api/filter?${params}`);
                 const data = await response.json();
@@ -582,23 +584,14 @@
                     throw new Error(data.error);
                 }
 
-                let filteredCompanies = data.companies;
+                currentData = data.companies;
                 
-                // Apply column filtering if selected
-                if (column) {
-                    filteredCompanies = filteredCompanies.filter(company => {
-                        return company[column] && company[column].trim() !== '';
-                    });
-                }
-
-                currentData = filteredCompanies;
-                
-                if (filteredCompanies.length === 0) {
+                if (data.companies.length === 0) {
                     document.getElementById('noResults').style.display = 'block';
                     document.getElementById('stats').innerHTML = '';
                 } else {
-                    displayResults({companies: filteredCompanies});
-                    updateFilterStats(filteredCompanies, {sector, sub_sector: subSector, column});
+                    displayResults(data);
+                    updateFilterStats(data.companies, {sector, sub_sector: subSector, classification: column});
                 }
 
             } catch (error) {
@@ -613,25 +606,26 @@
                 'ticker': 'Ticker',
                 'name': 'Name', 
                 'sector': 'Sector',
-                'sub_sector': 'Sub Sector'
+                'sub_sector': 'Sub Sector',
+                'classification': 'Classification'
             };
             
             let filterDescription = '';
             
-            if (filters.sector && filters.sub_sector && filters.column) {
-                filterDescription = `${filters.sector} - ${filters.sub_sector} + ${columnLabels[filters.column]}`;
+            if (filters.sector && filters.sub_sector && filters.classification) {
+                filterDescription = `${filters.sector} - ${filters.sub_sector} + ${filters.classification}`;
             } else if (filters.sector && filters.sub_sector) {
                 filterDescription = `${filters.sector} - ${filters.sub_sector}`;
-            } else if (filters.sector && filters.column) {
-                filterDescription = `${filters.sector} + ${columnLabels[filters.column]}`;
-            } else if (filters.sub_sector && filters.column) {
-                filterDescription = `${filters.sub_sector} + ${columnLabels[filters.column]}`;
+            } else if (filters.sector && filters.classification) {
+                filterDescription = `${filters.sector} + ${filters.classification}`;
+            } else if (filters.sub_sector && filters.classification) {
+                filterDescription = `${filters.sub_sector} + ${filters.classification}`;
             } else if (filters.sector) {
                 filterDescription = filters.sector;
             } else if (filters.sub_sector) {
                 filterDescription = filters.sub_sector;
-            } else if (filters.column) {
-                filterDescription = columnLabels[filters.column];
+            } else if (filters.classification) {
+                filterDescription = filters.classification;
             }
             
             const statsHtml = `

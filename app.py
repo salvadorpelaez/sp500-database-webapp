@@ -169,13 +169,14 @@ def get_subsectors():
 def filter_companies():
     sector = request.args.get('sector', '')
     sub_sector = request.args.get('sub_sector', '')
+    classification = request.args.get('classification', '')
     
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
         
         # Build query based on filters
-        query = "SELECT Ticker, Name, Sector, Sub_Sector FROM Companies WHERE 1=1"
+        query = "SELECT Ticker, Name, Sector, Sub_Sector, Classification FROM Companies WHERE 1=1"
         params = []
         
         if sector:
@@ -186,10 +187,20 @@ def filter_companies():
             query += " AND Sub_Sector = ?"
             params.append(sub_sector)
         
+        if classification:
+            # SQL is case-insensitive for string comparisons
+            query += " AND Classification = ?"
+            params.append(classification)
+        
         query += " ORDER BY Name"
+        
+        print(f"DEBUG - Query: {query}")
+        print(f"DEBUG - Params: {params}")
         
         cursor.execute(query, params)
         results = cursor.fetchall()
+        
+        print(f"DEBUG - Found {len(results)} results")
         
         # Convert to list of dictionaries with specific column order
         companies_list = []
@@ -197,19 +208,17 @@ def filter_companies():
             companies_list.append({
                 'ticker': result['Ticker'],
                 'name': result['Name'],
-                'sector': result['Sector'], 
-                'sub_sector': result['Sub_Sector']
+                'sector': result['Sector'],
+                'sub_sector': result['Sub_Sector'],
+                'classification': result['Classification'] if 'Classification' in result.keys() else ''
             })
         
         return jsonify({
             'companies': companies_list,
-            'filters': {
-                'sector': sector,
-                'sub_sector': sub_sector
-            },
-            'total_count': len(results)
+            'total_count': len(companies_list)
         })
     except Exception as e:
+        print(f"ERROR in filter: {e}")
         return jsonify({'error': str(e)})
     finally:
         conn.close()
