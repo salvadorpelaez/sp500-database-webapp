@@ -147,12 +147,26 @@
         }
 
         .market-data {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            display: flex;
+            flex-direction: column;
             gap: 20px;
             margin-top: 0px;
         }
-
+        
+        .market-row {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+        
+        .top-row {
+            justify-content: space-between;
+        }
+        
+        .bottom-row {
+            justify-content: center;
+        }
+        
         .market-card {
             background: white;
             border-radius: 12px;
@@ -160,6 +174,46 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             text-align: center;
             transition: transform 0.2s;
+            flex: 1;
+            min-width: 200px;
+            max-width: 220px;
+        }
+        
+        .bottom-row .market-card {
+            flex: 0 0 auto;
+            width: 200px;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            .market-row {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .market-card {
+                flex: 0 0 auto;
+                width: 200px;
+            }
+        }
+        
+        @media (max-width: 900px) {
+            .market-row {
+                flex-wrap: wrap;
+            }
+            .market-card {
+                width: 180px;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .market-row {
+                flex-direction: column;
+                align-items: center;
+            }
+            .market-card {
+                width: 100%;
+                max-width: 300px;
+            }
         }
 
         .market-card:hover {
@@ -255,37 +309,41 @@
                 const container = document.getElementById('marketDataContainer');
                 container.className = 'market-data';
                 
+                // Convert data to array and split into two rows
+                const dataArray = Object.entries(data.data);
+                console.log('All indices:', dataArray.map(([ticker, info]) => info.name));
+                
+                // Identify European indices and separate them
+                const europeanIndices = ['CAC 40', 'FTSE 100', 'DAX'];
+                const usIndices = [];
+                const euIndices = [];
+                
+                dataArray.forEach(([ticker, info]) => {
+                    if (europeanIndices.includes(info.name)) {
+                        euIndices.push([ticker, info]);
+                    } else {
+                        usIndices.push([ticker, info]);
+                    }
+                });
+                
+                console.log('US indices:', usIndices.map(([ticker, info]) => info.name));
+                console.log('European indices:', euIndices.map(([ticker, info]) => info.name));
+                
                 let html = '';
-                for (const [ticker, info] of Object.entries(data.data)) {
-                    const changeClass = info.change >= 0 ? 'positive' : 'negative';
-                    const changeSymbol = info.change >= 0 ? '+' : '';
-                    
-                    let priceDisplay = info.price;
-                    if (info.price === 'N/A') {
-                        priceDisplay = 'N/A';
-                    } else if (info.price === 'Error') {
-                        priceDisplay = 'Error';
-                    } else {
-                        priceDisplay = `$${parseFloat(info.price).toLocaleString()}`;
-                    }
-                    
-                    let changeDisplay = '';
-                    if (info.price === 'N/A' || info.price === 'Error') {
-                        changeDisplay = 'No data';
-                    } else {
-                        changeDisplay = `${changeSymbol}${info.change.toFixed(2)} (${changeSymbol}${info.change_percent.toFixed(2)}%)`;
-                    }
-                    
-                    html += `
-                        <div class="market-card">
-                            <div class="market-name">${info.name}</div>
-                            <div class="market-price">${priceDisplay}</div>
-                            <div class="market-change ${info.price === 'N/A' || info.price === 'Error' ? '' : changeClass}">
-                                ${changeDisplay}
-                            </div>
-                        </div>
-                    `;
+                
+                // Create top row with US indices (max 5)
+                html += '<div class="market-row top-row">';
+                for (const [ticker, info] of usIndices.slice(0, 5)) {
+                    html += createMarketCard(info);
                 }
+                html += '</div>';
+                
+                // Create bottom row with European indices (always 3)
+                html += '<div class="market-row bottom-row">';
+                for (const [ticker, info] of euIndices) {
+                    html += createMarketCard(info);
+                }
+                html += '</div>';
                 
                 container.innerHTML = html;
                 
@@ -293,6 +351,38 @@
                 const container = document.getElementById('marketDataContainer');
                 container.innerHTML = `<p>Error loading market data: ${error.message}</p>`;
             }
+        }
+        
+        // Helper function to create market card HTML
+        function createMarketCard(info) {
+            const changeClass = info.change >= 0 ? 'positive' : 'negative';
+            const changeSymbol = info.change >= 0 ? '+' : '';
+            
+            let priceDisplay = info.price;
+            if (info.price === 'N/A') {
+                priceDisplay = 'N/A';
+            } else if (info.price === 'Error') {
+                priceDisplay = 'Error';
+            } else {
+                priceDisplay = `$${parseFloat(info.price).toLocaleString()}`;
+            }
+            
+            let changeDisplay = '';
+            if (info.price === 'N/A' || info.price === 'Error') {
+                changeDisplay = 'No data';
+            } else {
+                changeDisplay = `${changeSymbol}${info.change.toFixed(2)} (${changeSymbol}${info.change_percent.toFixed(2)}%)`;
+            }
+            
+            return `
+                <div class="market-card">
+                    <div class="market-name">${info.name}</div>
+                    <div class="market-price">${priceDisplay}</div>
+                    <div class="market-change ${info.price === 'N/A' || info.price === 'Error' ? '' : changeClass}">
+                        ${changeDisplay}
+                    </div>
+                </div>
+            `;
         }
 
         // Login functionality

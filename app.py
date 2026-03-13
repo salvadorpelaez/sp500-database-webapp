@@ -1,10 +1,16 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 import sqlite3
-import os
 import yfinance as yf
 import pandas as pd
+import requests
+import os
+from datetime import datetime
 
 app = Flask(__name__)
+
+# Add Alpha Vantage API key - Replace with your actual API key
+# Get free key from: https://www.alphavantage.co/support/#api-key
+ALPHA_VANTAGE_API_KEY = os.environ.get('ALPHA_VANTAGE_API_KEY', 'demo')  # Use 'demo' for testing
 
 def get_db_connection():
     conn = sqlite3.connect(r"c:\Users\salva\CascadeProjects\sp500-database-webapp\S&P500_Master.db")
@@ -28,11 +34,71 @@ def test_page():
 @app.route('/api/market-data')
 def get_market_data():
     try:
-        tickers = ['^DJI', '^GSPC', '^IXIC', 'CL=F', '^TNX']
-        data = yf.download(tickers, period='2d', interval='1d')  # Use daily data for more reliability
+        # Define order: US first, then European at bottom
+        ordered_indices = [
+            ('S&P 500', '^GSPC'),
+            ('NASDAQ', '^IXIC'),
+            ('10Y Treasury', '^TNX'),
+            ('Dow Jones', '^DJI'),
+            ('Crude Oil', 'CL=F'),
+            ('CAC 40', '^FCHI'),
+            ('FTSE 100', '^FTSE'), 
+            ('DAX', '^GDAXI')
+        ]
         
-        # Get the latest data for each ticker
         latest_data = {}
+        
+        # Get European indices using Alpha Vantage
+        european_symbols = ['^FCHI', '^FTSE', '^GDAXI']
+        for name, symbol in ordered_indices:
+            if symbol in european_symbols:
+                try:
+                    # Use Alpha Vantage for European indices
+                    url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={ALPHA_VANTAGE_API_KEY}"
+                    response = requests.get(url)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        if 'Global Quote' in data:
+                            quote = data['Global Quote']
+                            price = float(quote['05. price'])
+                            change = float(quote['09. change'])
+                            change_percent = float(quote['10. change percent'].replace('%', ''))
+                            
+                            latest_data[symbol] = {
+                                'name': name,
+                                'price': round(price, 2),
+                                'change': round(change, 2),
+                                'change_percent': round(change_percent, 2)
+                            }
+                        else:
+                            # Fallback to placeholder if API limit reached
+                            latest_data[symbol] = {
+                                'name': name,
+                                'price': 'N/A',
+                                'change': 0,
+                                'change_percent': 0
+                            }
+                    else:
+                        latest_data[symbol] = {
+                            'name': name,
+                            'price': 'Error',
+                            'change': 0,
+                            'change_percent': 0
+                        }
+                except Exception as e:
+                    # Add placeholder for failed API call
+                    latest_data[symbol] = {
+                        'name': name,
+                        'price': 'N/A',
+                        'change': 0,
+                        'change_percent': 0
+                    }
+        
+        # Get US indices using yfinance
+        us_tickers = ['^GSPC', '^IXIC', '^TNX', '^DJI', 'CL=F']
+        data = yf.download(us_tickers, period='2d', interval='1d')
+        
         ticker_names = {
             '^DJI': 'Dow Jones',
             '^GSPC': 'S&P 500', 
@@ -41,10 +107,9 @@ def get_market_data():
             '^TNX': '10Y Treasury'
         }
         
-        for ticker in tickers:
+        for ticker in us_tickers:
             try:
                 if ticker in data['Close'].columns:
-                    # Get the most recent non-NaN price
                     close_prices = data['Close'][ticker].dropna()
                     if len(close_prices) == 0:
                         continue
@@ -98,7 +163,13 @@ def get_market_data():
                     'change_percent': 0
                 }
         
-        return jsonify({'data': latest_data})
+        # Create ordered response based on the defined order
+        ordered_data = {}
+        for name, symbol in ordered_indices:
+            if symbol in latest_data:
+                ordered_data[symbol] = latest_data[symbol]
+        
+        return jsonify({'data': ordered_data})
     except Exception as e:
         return jsonify({'error': str(e)})
 
