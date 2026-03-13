@@ -38,9 +38,9 @@ def get_market_data():
         ordered_indices = [
             ('S&P 500', '^GSPC'),
             ('NASDAQ', '^IXIC'),
-            ('10Y Treasury', '^TNX'),
             ('Dow Jones', '^DJI'),
             ('Crude Oil', 'CL=F'),
+            ('10Y Treasury', '^TNX'),
             ('CAC 40', '^FCHI'),
             ('FTSE 100', '^FTSE'), 
             ('DAX', '^GDAXI')
