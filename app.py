@@ -385,6 +385,71 @@ def get_columns():
     finally:
         conn.close()
 
+@app.route('/api/all-stocks')
+def get_all_stocks():
+    """Get all stocks from all exchanges (Companies, NASDAQ, NYSE)"""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        all_stocks = []
+        
+        # Get S&P 500 companies
+        cursor.execute("""
+            SELECT Symbol as ticker, CompanyName as name, 'S&P 500' as exchange, 
+                   COALESCE(Sector, 'N/A') as sector
+            FROM Companies 
+            WHERE Symbol IS NOT NULL AND CompanyName IS NOT NULL
+            ORDER BY Symbol
+        """)
+        sp500_stocks = cursor.fetchall()
+        for stock in sp500_stocks:
+            all_stocks.append({
+                'ticker': stock[0],
+                'name': stock[1],
+                'exchange': stock[2],
+                'sector': stock[3]
+            })
+        
+        # Get NASDAQ stocks
+        cursor.execute("""
+            SELECT Symbol as ticker, CompanyName as name, 'NASDAQ' as exchange,
+                   COALESCE(Sector, 'N/A') as sector
+            FROM NASDAQ 
+            WHERE Symbol IS NOT NULL AND CompanyName IS NOT NULL
+            ORDER BY Symbol
+        """)
+        nasdaq_stocks = cursor.fetchall()
+        for stock in nasdaq_stocks:
+            all_stocks.append({
+                'ticker': stock[0],
+                'name': stock[1],
+                'exchange': stock[2],
+                'sector': stock[3]
+            })
+        
+        # Get NYSE stocks
+        cursor.execute("""
+            SELECT Ticker as ticker, Company_Name as name, 'NYSE' as exchange,
+                   COALESCE(Sector, 'N/A') as sector
+            FROM NYSE 
+            WHERE Ticker IS NOT NULL AND Company_Name IS NOT NULL
+            ORDER BY Ticker
+        """)
+        nyse_stocks = cursor.fetchall()
+        for stock in nyse_stocks:
+            all_stocks.append({
+                'ticker': stock[0],
+                'name': stock[1],
+                'exchange': stock[2],
+                'sector': stock[3]
+            })
+        
+        return jsonify(all_stocks)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory('static', filename)

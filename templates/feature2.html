@@ -82,7 +82,8 @@
         .main-content {
             background: white;
             border-radius: 12px;
-            padding: 30px;
+            padding: 20px 100px 100px 100px;
+            min-height: 800px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.1);
         }
 
@@ -143,6 +144,70 @@
             border: 1px solid #dee2e6;
         }
 
+        .footer-text {
+            position: relative;
+            float: right;
+            margin-top: 10px;
+            font-size: 16px;
+            color: #6c757d;
+            font-style: italic;
+            clear: both;
+        }
+
+        .stock-selection {
+            margin: 40px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .stock-label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .stock-dropdown {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            margin-bottom: 15px;
+            transition: border-color 0.3s ease;
+        }
+
+        .stock-dropdown:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .add-stock-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .add-stock-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .add-stock-btn:active {
+            transform: translateY(0);
+        }
+
         .coming-soon {
             text-align: center;
             padding: 60px 20px;
@@ -171,23 +236,109 @@
         </header>
 
         <main class="main-content">
-            <h1 class="page-title">Feature 2</h1>
+            <h1 class="page-title">Build/Update Your Portfolio</h1>
             <p class="page-subtitle">Advanced analytics and tools for enhanced market insights</p>
 
-            <div class="coming-soon">
-                <h2>🚧 Coming Soon</h2>
-                <p>Feature 2 is currently under development.</p>
-                <p>We're building powerful tools including:</p>
-                <ul style="text-align: left; max-width: 500px; margin: 20px auto;">
-                    <li>Advanced Portfolio Analytics</li>
-                    <li>Risk Assessment Tools</li>
-                    <li>Performance Metrics Dashboard</li>
-                    <li>Custom Charting Solutions</li>
-                    <li>Automated Trading Strategies</li>
-                </ul>
-                <p>Check back soon for these exciting features!</p>
+            <div class="stock-selection">
+                <label for="stockDropdown" class="stock-label">Select stock name/stock ticker:</label>
+                <select id="stockDropdown" class="stock-dropdown">
+                    <option value="">Loading stocks...</option>
+                </select>
+                <button id="addStockBtn" class="add-stock-btn">Add to Portfolio</button>
+            </div>
+
+            <div class="footer-text">
+                Hello world! 🐍☕
             </div>
         </main>
     </div>
+
+    <script>
+        // Stock selection functionality
+        let allStocks = [];
+
+        // Load all stocks when page loads
+        window.addEventListener('load', loadStocks);
+
+        async function loadStocks() {
+            try {
+                const response = await fetch('/api/all-stocks');
+                allStocks = await response.json();
+                populateStockDropdown();
+            } catch (error) {
+                console.error('Error loading stocks:', error);
+                document.getElementById('stockDropdown').innerHTML = '<option value="">Error loading stocks</option>';
+            }
+        }
+
+        function populateStockDropdown() {
+            const dropdown = document.getElementById('stockDropdown');
+            
+            // Clear existing options
+            dropdown.innerHTML = '<option value="">Select a stock...</option>';
+            
+            // Add stocks grouped by exchange
+            const groupedStocks = groupStocksByExchange(allStocks);
+            
+            Object.keys(groupedStocks).sort().forEach(exchange => {
+                // Add exchange as optgroup
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = exchange;
+                
+                // Add stocks for this exchange
+                groupedStocks[exchange].forEach(stock => {
+                    const option = document.createElement('option');
+                    option.value = stock.ticker;
+                    option.textContent = `${stock.ticker} - ${stock.name}`;
+                    optgroup.appendChild(option);
+                });
+                
+                dropdown.appendChild(optgroup);
+            });
+        }
+
+        function groupStocksByExchange(stocks) {
+            const grouped = {};
+            stocks.forEach(stock => {
+                if (!grouped[stock.exchange]) {
+                    grouped[stock.exchange] = [];
+                }
+                grouped[stock.exchange].push(stock);
+            });
+            return grouped;
+        }
+
+        // Handle stock selection
+        document.getElementById('addStockBtn').addEventListener('click', function() {
+            const selectedStock = document.getElementById('stockDropdown').value;
+            
+            if (!selectedStock) {
+                alert('Please select a stock first');
+                return;
+            }
+            
+            // Find stock details
+            const stock = allStocks.find(s => s.ticker === selectedStock);
+            
+            if (stock) {
+                alert(`Added to portfolio:\nTicker: ${stock.ticker}\nName: ${stock.name}\nExchange: ${stock.exchange}\nSector: ${stock.sector || 'N/A'}`);
+                // Here you would typically add the stock to a portfolio
+                console.log('Stock added to portfolio:', stock);
+            }
+        });
+
+        // Add search functionality to dropdown
+        document.getElementById('stockDropdown').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const options = this.querySelectorAll('option');
+            
+            options.forEach(option => {
+                if (option.value === '') return; // Skip placeholder
+                
+                const text = option.textContent.toLowerCase();
+                option.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+    </script>
 </body>
 </html>
