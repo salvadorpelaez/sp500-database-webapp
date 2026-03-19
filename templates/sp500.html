@@ -392,7 +392,7 @@
                 <div class="logo">
                     <img src="/static/logo.png" alt="Company Logo">
                 </div>
-                <span class="logo-text">Valerious - Value Analytics Made Simple</span>
+                <span class="logo-text">Valerius - Value Analytics Made Simple</span>
             </div>
             <div class="login-container">
                 <a href="/" class="back-btn">Back to Main Page</a>
@@ -469,8 +469,8 @@
         let currentPage = 1;
         let currentCompanies = [];
 
-        const TABLE_HEADERS = ['ticker', 'name', 'sector', 'sub_sector', 'classification'];
-        const TABLE_HEADER_NAMES = ['Ticker', 'Name', 'Sector', 'Sub Sector', 'Classification'];
+        const TABLE_HEADERS = ['ticker', 'name', 'sector', 'sub_sector'];
+        const TABLE_HEADER_NAMES = ['Ticker', 'Name', 'Sector', 'Sub Sector'];
 
         // Tab switching functionality
         function switchTab(tab) {
@@ -749,14 +749,7 @@
                 const row = document.createElement('tr');
                 TABLE_HEADERS.forEach(header => {
                     const td = document.createElement('td');
-                    const value = company[header] || '';
-                    td.textContent = value;
-                    
-                    // Debug: Log classification values
-                    if (header === 'classification' && value) {
-                        console.log(`Classification found: ${company.ticker} -> ${value}`);
-                    }
-                    
+                    td.textContent = company[header] || '';
                     row.appendChild(td);
                 });
                 tableBody.appendChild(row);
@@ -831,22 +824,6 @@
 
         // Load companies when page loads
         window.addEventListener('load', loadCompanies);
-        
-        // Debug: Add a test button to check classification data
-        setTimeout(() => {
-            const debugBtn = document.createElement('button');
-            debugBtn.textContent = 'Debug Classification';
-            debugBtn.onclick = function() {
-                console.log('=== CLASSIFICATION DEBUG ===');
-                currentData.forEach((company, index) => {
-                    if (company.classification) {
-                        console.log(`${index}: ${company.ticker} -> "${company.classification}"`);
-                    }
-                });
-                console.log(`Total with classification: ${currentData.filter(c => c.classification).length}`);
-            };
-            document.querySelector('main').prepend(debugBtn);
-        }, 2000);
     </script>
 </body>
 </html>
