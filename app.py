@@ -17,7 +17,7 @@ app.register_blueprint(indicators_bp)
 ALPHA_VANTAGE_API_KEY = os.environ.get('ALPHA_VANTAGE_API_KEY', 'demo')  # Use 'demo' for testing
 
 def get_db_connection():
-    conn = sqlite3.connect(r"c:\Users\salva\CascadeProjects\sp500-database-webapp\S&P500_Master.db")
+    conn = sqlite3.connect('S&P500_Master.db')
     conn.row_factory = sqlite3.Row
     return conn
 
