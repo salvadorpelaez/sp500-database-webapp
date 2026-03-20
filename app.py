@@ -552,6 +552,69 @@ def search_stock():
     finally:
         conn.close()
 
+@app.route('/api/add-to-portfolio', methods=['POST'])
+def add_to_portfolio():
+    """Add a stock to the user's portfolio"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        required_fields = ['ticker', 'name', 'exchange', 'price', 'change', 'change_percent']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        # For now, we'll store the portfolio in a simple list
+        # In a real application, you'd store this in a database with user authentication
+        
+        # Initialize portfolio list if it doesn't exist
+        if not hasattr(add_to_portfolio, 'portfolio'):
+            add_to_portfolio.portfolio = []
+        
+        # Check if stock already exists in portfolio
+        for stock in add_to_portfolio.portfolio:
+            if stock['ticker'] == data['ticker']:
+                return jsonify({'error': 'Stock already in portfolio'}), 400
+        
+        # Add stock to portfolio
+        portfolio_stock = {
+            'ticker': data['ticker'],
+            'name': data['name'],
+            'exchange': data['exchange'],
+            'price': data['price'],
+            'change': data['change'],
+            'change_percent': data['change_percent'],
+            'added_at': pd.Timestamp.now().isoformat()
+        }
+        
+        add_to_portfolio.portfolio.append(portfolio_stock)
+        
+        return jsonify({
+            'success': True,
+            'message': f"{data['name']} added to portfolio",
+            'portfolio_size': len(add_to_portfolio.portfolio)
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/get-portfolio')
+def get_portfolio():
+    """Get the user's current portfolio"""
+    try:
+        if not hasattr(add_to_portfolio, 'portfolio'):
+            add_to_portfolio.portfolio = []
+        
+        return jsonify({
+            'portfolio': add_to_portfolio.portfolio,
+            'size': len(add_to_portfolio.portfolio)
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory('static', filename)

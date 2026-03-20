@@ -288,6 +288,27 @@
             transform: translateY(0);
         }
 
+        .clear-results-btn {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .clear-results-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .clear-results-btn:active {
+            transform: translateY(0);
+        }
+
         .search-results {
             margin-top: 30px;
             padding: 20px;
@@ -382,6 +403,43 @@
             border-color: #f5c6cb;
         }
 
+        .stock-tile.selectable {
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .stock-tile.selectable:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
+        }
+
+        .stock-tile.selectable.selected {
+            border-color: #28a745;
+            background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);
+        }
+
+        .portfolio-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+
+        .portfolio-notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
         .coming-soon {
             text-align: center;
             padding: 60px 20px;
@@ -419,6 +477,7 @@
                 <div id="stockSuggestions" class="stock-suggestions"></div>
                 <div class="button-group">
                     <button id="searchStockBtn" class="search-stock-btn">Search Stock</button>
+                    <button id="clearResultsBtn" class="clear-results-btn">Clear Results</button>
                     <button id="addStockBtn" class="add-stock-btn">Add to Portfolio</button>
                 </div>
             </div>
@@ -433,6 +492,8 @@
             </div>
         </main>
     </div>
+
+    <div id="portfolioNotification" class="portfolio-notification"></div>
 
     <script>
         // Stock autocomplete functionality
@@ -556,6 +617,31 @@
         // Handle stock selection
         document.getElementById('addStockBtn').addEventListener('click', addStockToPortfolio);
         document.getElementById('searchStockBtn').addEventListener('click', searchStock);
+        document.getElementById('clearResultsBtn').addEventListener('click', clearResults);
+
+        function clearResults() {
+            // Clear search input
+            document.getElementById('stockInput').value = '';
+            
+            // Hide suggestions
+            document.getElementById('stockSuggestions').style.display = 'none';
+            
+            // Hide search results section
+            document.getElementById('searchResults').style.display = 'none';
+            
+            // Clear search results container
+            document.getElementById('searchResultsContainer').innerHTML = '';
+            
+            // Clear global search results
+            window.currentSearchResults = [];
+            
+            // Reset selected stock
+            selectedStock = null;
+            
+            // Remove any selected highlights
+            const tiles = document.querySelectorAll('.stock-tile');
+            tiles.forEach(tile => tile.classList.remove('selected'));
+        }
 
         async function searchStock() {
             const searchTerm = document.getElementById('stockInput').value.trim();
@@ -603,7 +689,7 @@
             }
             
             let html = '';
-            results.forEach(stock => {
+            results.forEach((stock, index) => {
                 const changeClass = stock.change >= 0 ? 'positive' : 'negative';
                 const changeSymbol = stock.change >= 0 ? '+' : '';
                 
@@ -622,7 +708,7 @@
                 }
                 
                 html += `
-                    <div class="stock-tile">
+                    <div class="stock-tile selectable" onclick="addToPortfolio(${index})" data-stock-index="${index}">
                         <div class="stock-tile-header">
                             <div class="stock-ticker">${stock.ticker}</div>
                             <div class="stock-exchange">${stock.exchange}</div>
@@ -637,6 +723,71 @@
             });
             
             searchResultsContainer.innerHTML = html;
+            
+            // Store search results globally for access in addToPortfolio function
+            window.currentSearchResults = results;
+        }
+
+        async function addToPortfolio(index) {
+            const stock = window.currentSearchResults[index];
+            
+            if (!stock) {
+                console.error('Stock data not found');
+                return;
+            }
+            
+            try {
+                // Add stock to portfolio via API
+                const response = await fetch('/api/add-to-portfolio', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ticker: stock.ticker,
+                        name: stock.name,
+                        exchange: stock.exchange,
+                        price: stock.price,
+                        change: stock.change,
+                        change_percent: stock.change_percent
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Show success notification
+                    showPortfolioNotification(`${stock.name} has been added to your dashboard`);
+                    
+                    // Highlight the selected tile
+                    const tiles = document.querySelectorAll('.stock-tile');
+                    tiles.forEach(tile => tile.classList.remove('selected'));
+                    tiles[index].classList.add('selected');
+                } else {
+                    throw new Error(result.error || 'Failed to add to portfolio');
+                }
+            } catch (error) {
+                console.error('Error adding to portfolio:', error);
+                showPortfolioNotification(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        function showPortfolioNotification(message, type = 'success') {
+            const notification = document.getElementById('portfolioNotification');
+            notification.textContent = message;
+            
+            if (type === 'error') {
+                notification.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+            } else {
+                notification.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+            }
+            
+            notification.classList.add('show');
+            
+            // Hide notification after 3 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
         }
 
         function addStockToPortfolio() {

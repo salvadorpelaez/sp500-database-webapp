@@ -382,6 +382,106 @@
         .index-selector-btn:active {
             transform: translateY(0);
         }
+
+        .portfolio-section {
+            margin-top: 40px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+        }
+
+        .portfolio-title {
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .portfolio-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .portfolio-tile {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid #dee2e6;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .portfolio-tile:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .portfolio-tile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .portfolio-ticker {
+            font-size: 16px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .portfolio-exchange {
+            font-size: 11px;
+            color: #6c757d;
+            background: #f8f9fa;
+            padding: 3px 6px;
+            border-radius: 3px;
+        }
+
+        .portfolio-name {
+            font-size: 13px;
+            color: #495057;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .portfolio-price {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 4px;
+        }
+
+        .portfolio-change {
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .portfolio-change.positive {
+            color: #28a745;
+        }
+
+        .portfolio-change.negative {
+            color: #dc3545;
+        }
+
+        .portfolio-timestamp {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 10px;
+            color: #6c757d;
+            opacity: 0.7;
+        }
+
+        .empty-portfolio {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -403,6 +503,12 @@
             <div id="marketDataContainer" class="market-loading">
                 <p>Loading market data...</p>
             </div>
+            
+            <div id="portfolioSection" class="portfolio-section" style="display: none;">
+                <h3 class="portfolio-title">My Portfolio</h3>
+                <div id="portfolioContainer" class="portfolio-container"></div>
+            </div>
+            
             <div class="footer-text">
                 Hello world! 🐍☕
             </div>
@@ -502,10 +608,91 @@
         }
 
         // Load market data when page loads
-        window.addEventListener('load', loadMarketData);
+        window.addEventListener('load', function() {
+            loadMarketData();
+            loadPortfolio();
+        });
         
         // Refresh market data every 60 seconds
         setInterval(loadMarketData, 60000);
+        
+        // Load portfolio data
+        async function loadPortfolio() {
+            try {
+                const response = await fetch('/api/get-portfolio');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayPortfolio(data.portfolio);
+                } else {
+                    throw new Error(data.error || 'Failed to load portfolio');
+                }
+            } catch (error) {
+                console.error('Error loading portfolio:', error);
+            }
+        }
+        
+        function displayPortfolio(portfolio) {
+            const portfolioSection = document.getElementById('portfolioSection');
+            const portfolioContainer = document.getElementById('portfolioContainer');
+            
+            if (!portfolio || portfolio.length === 0) {
+                portfolioSection.style.display = 'none';
+                return;
+            }
+            
+            portfolioSection.style.display = 'block';
+            
+            let html = '';
+            portfolio.forEach(stock => {
+                const changeClass = stock.change >= 0 ? 'positive' : 'negative';
+                const changeSymbol = stock.change >= 0 ? '+' : '';
+                
+                let priceDisplay = stock.price;
+                if (stock.price === 'N/A' || stock.price === 'Error') {
+                    priceDisplay = stock.price;
+                } else {
+                    priceDisplay = `$${parseFloat(stock.price).toFixed(2)}`;
+                }
+                
+                let changeDisplay = '';
+                if (stock.price === 'N/A' || stock.price === 'Error') {
+                    changeDisplay = 'No data';
+                } else {
+                    changeDisplay = `${changeSymbol}${stock.change.toFixed(2)} (${changeSymbol}${stock.change_percent.toFixed(2)}%)`;
+                }
+                
+                // Format timestamp
+                const addedDate = new Date(stock.added_at);
+                const timeAgo = getTimeAgo(addedDate);
+                
+                html += `
+                    <div class="portfolio-tile">
+                        <div class="portfolio-timestamp">${timeAgo}</div>
+                        <div class="portfolio-tile-header">
+                            <div class="portfolio-ticker">${stock.ticker}</div>
+                            <div class="portfolio-exchange">${stock.exchange}</div>
+                        </div>
+                        <div class="portfolio-name">${stock.name}</div>
+                        <div class="portfolio-price">${priceDisplay}</div>
+                        <div class="portfolio-change ${stock.price === 'N/A' || stock.price === 'Error' ? '' : changeClass}">
+                            ${changeDisplay}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            portfolioContainer.innerHTML = html;
+        }
+        
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            if (seconds < 60) return 'Just now';
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+            return `${Math.floor(seconds / 86400)}d ago`;
+        }
     </script>
 </body>
 </html>
