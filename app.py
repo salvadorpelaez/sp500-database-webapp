@@ -615,6 +615,84 @@ def get_portfolio():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/stock-graph')
+def stock_graph():
+    """Display stock graph page"""
+    ticker = request.args.get('ticker', '')
+    name = request.args.get('name', '')
+    exchange = request.args.get('exchange', '')
+    
+    return render_template('stock_graph.html', ticker=ticker, name=name, exchange=exchange)
+
+@app.route('/api/stock-data')
+def get_stock_data():
+    """Get stock data for graph display"""
+    ticker = request.args.get('ticker', '').strip()
+    timeframe = request.args.get('timeframe', '1w')
+    
+    if not ticker:
+        return jsonify({'error': 'Ticker parameter is required'}), 400
+    
+    try:
+        import yfinance as yf
+        
+        # Map timeframe to yfinance period
+        period_map = {
+            '1d': '1d',
+            '1w': '5d',    # 5 trading days for 1 week
+            '1m': '1mo',
+            '3m': '3mo',
+            '1y': '1y'
+        }
+        
+        period = period_map.get(timeframe, '5d')
+        
+        # Fetch stock data
+        stock = yf.Ticker(ticker)
+        
+        # Get historical data
+        hist = stock.history(period=period, interval='1d')
+        
+        if hist.empty:
+            return jsonify({'error': 'No data found for this ticker'}), 404
+        
+        # Get current price info
+        current_data = stock.history(period='2d', interval='1d')
+        
+        if len(current_data) < 2:
+            prev_close = current_data['Close'].iloc[-1]
+        else:
+            prev_close = current_data['Close'].iloc[-2]
+        
+        current_price = current_data['Close'].iloc[-1]
+        change = current_price - prev_close
+        change_percent = (change / prev_close) * 100 if prev_close != 0 else 0
+        
+        # Prepare data for chart
+        labels = []
+        prices = []
+        
+        for date, row in hist.iterrows():
+            labels.append(date.strftime('%Y-%m-%d'))
+            prices.append(float(row['Close']))
+        
+        # Get volume
+        volume = current_data['Volume'].iloc[-1] if not current_data.empty else None
+        
+        return jsonify({
+            'ticker': ticker,
+            'current_price': float(current_price),
+            'change': float(change),
+            'change_percent': float(change_percent),
+            'volume': int(volume) if volume else None,
+            'labels': labels,
+            'prices': prices
+        })
+        
+    except Exception as e:
+        print(f"Error fetching stock data: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory('static', filename)
