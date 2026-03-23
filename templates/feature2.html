@@ -489,9 +489,21 @@
             box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
         }
 
-        .stock-tile.selectable.selected {
+        .stock-tile.selectable:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .stock-tile.adding {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             border-color: #28a745;
-            background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
 
         .portfolio-notification {
@@ -761,6 +773,42 @@
             }
         }
 
+        // Track double-click timing
+        let lastClickTime = 0;
+        let clickTimeout = null;
+
+        function handleTileClick(index, event) {
+            const currentTime = Date.now();
+            
+            // Check for double-click (within 500ms)
+            if (lastClickTime && (currentTime - lastClickTime < 500)) {
+                // Double-click detected
+                clearTimeout(clickTimeout);
+                lastClickTime = 0;
+                
+                // Add to portfolio immediately
+                addToPortfolio(index);
+                return;
+            }
+            
+            // Single-click - set timeout for potential double-click
+            lastClickTime = currentTime;
+            clickTimeout = setTimeout(() => {
+                // If no second click within 500ms, add to portfolio
+                addToPortfolio(index);
+                lastClickTime = 0;
+            }, 500);
+            
+            // Visual feedback
+            const tile = document.querySelector(`[data-index="${index}"]`);
+            if (tile) {
+                tile.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    tile.style.transform = '';
+                }, 150);
+            }
+        }
+
         async function displaySearchResults(results) {
             const searchResultsContainer = document.getElementById('searchResultsContainer');
             
@@ -773,7 +821,7 @@
             let html = '';
             results.forEach((stock, index) => {
                 html += `
-                    <div class="stock-tile selectable" onclick="selectSearchResult(${index})" data-index="${index}">
+                    <div class="stock-tile selectable" onclick="handleTileClick(${index}, event)" data-index="${index}">
                         <div class="stock-tile-header">
                             <div class="stock-ticker">${stock.ticker}</div>
                             <div class="stock-exchange">${stock.exchange}</div>
